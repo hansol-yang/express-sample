@@ -1,4 +1,5 @@
 const { User } = require('../../db/models');
+const bcrypt = require('bcrypt');
 /**
  * 회원 가입
  *
@@ -36,9 +37,36 @@ exports.register = async (req, res) => {
     }
 };
 
-exports.login = (req, res) => {
-    res.json({
-        success: true,
-        msg: 'login api',
-    });
+/**
+ * 로그인
+ *
+ * 1. 주어진 username 으로 가입된 유저가 있는지 ?
+ *  1.1 없다면 403 에러
+ *  1.2 있다면 비밀번호 확인
+ *      1.2.1 비밀번호가 틀리다면 403 에러
+ * 2. 토큰 발행
+ */
+exports.login = async (req, res) => {
+    const { username, password } = req.body;
+    const loginErrorObj = { msg: '로그인 정보를 확인해주세요' };
+
+    try {
+        const user = await User.findOne({ where: { username } });
+        
+        if(!user) {
+            return res.status(403).json(loginErrorObj)
+        }
+
+        const passwordIsValid = await user.validPassword(password)
+        if(!passwordIsValid) {
+            return res.status(403).json(loginErrorObj)
+        }
+
+        res.json({
+            msg: '토큰 발행'
+        })
+        
+    } catch(e) {
+        console.log('에러 핸들링', e);
+    }
 };
