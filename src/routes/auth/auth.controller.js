@@ -1,5 +1,6 @@
 const { User } = require('../../db/models');
-const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
 /**
  * 회원 가입
  *
@@ -52,21 +53,27 @@ exports.login = async (req, res) => {
 
     try {
         const user = await User.findOne({ where: { username } });
-        
-        if(!user) {
-            return res.status(403).json(loginErrorObj)
+
+        if (!user) {
+            return res.status(401).json(loginErrorObj);
         }
 
-        const passwordIsValid = await user.validPassword(password)
-        if(!passwordIsValid) {
-            return res.status(403).json(loginErrorObj)
+        const passwordIsValid = await user.validPassword(password);
+        if (!passwordIsValid) {
+            return res.status(401).json(loginErrorObj);
         }
 
-        res.json({
-            msg: '토큰 발행'
-        })
-        
-    } catch(e) {
+        const payload = { username: user.username, sub: user.id };
+        jwt.sign(payload, 'S3Cr#tK3Y', { expiresIn: '1h' }, (err, token) => {
+            if (err) {
+                throw err;
+            }
+
+            res.json({
+                token,
+            });
+        });
+    } catch (e) {
         console.log('에러 핸들링', e);
     }
 };
